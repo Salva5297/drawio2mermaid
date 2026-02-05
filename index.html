@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Convierte diagramas entre Draw.io y Mermaid de forma bidireccional">
+  <title>Draw.io ↔ Mermaid Converter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+          <path d="M2 17l10 5 10-5" />
+          <path d="M2 12l10 5 10-5" />
+        </svg>
+        <h1>Draw.io <span class="arrow">↔</span> Mermaid</h1>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="btn btn-icon" title="Cambiar tema">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5" />
+            <path
+              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        </button>
+        <button id="templates-btn" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Templates
+        </button>
+        <button id="history-btn" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          History
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Draw.io Panel -->
+      <div class="panel panel-drawio">
+        <div class="panel-header">
+          <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Draw.io Editor
+          </h2>
+          <div class="panel-actions">
+            <input type="file" id="drawio-file-input" accept=".drawio,.xml" hidden>
+            <button id="drawio-load-btn" class="btn btn-sm btn-secondary" title="Load Draw.io file">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Load
+            </button>
+            <!-- Export button removed as Draw.io has built-in export -->
+          </div>
+        </div>
+        <div class="panel-content">
+          <div id="drawio-container" class="editor-container">
+            <div class="dropzone" id="drawio-dropzone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p>Drag a .drawio file here</p>
+              <span>or click "Load"</span>
+            </div>
+            <iframe id="drawio-iframe" class="drawio-iframe hidden"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conversion Controls -->
+      <div class="conversion-controls">
+        <button id="convert-to-mermaid" class="btn btn-primary btn-convert" title="Convert Draw.io to Mermaid">
+          <span>&rarr;</span>
+          <small>To Mermaid</small>
+        </button>
+        <button id="convert-to-drawio" class="btn btn-secondary btn-convert" title="Convert Mermaid to Draw.io (Beta)">
+          <span>&larr;</span>
+          <small>To Draw.io</small>
+        </button>
+      </div>
+
+      <!-- Mermaid Panel -->
+      <section class="panel panel-mermaid">
+        <div class="panel-header">
+          <h2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+            </svg>
+            Mermaid
+          </h2>
+          <div class="panel-actions">
+            <button id="load-mermaid" class="btn btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Cargar
+            </button>
+            <div class="dropdown">
+              <button id="export-mermaid-btn" class="btn btn-sm">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Exportar
+              </button>
+              <div class="dropdown-menu" id="export-mermaid-menu">
+                <button data-format="mmd">.mmd</button>
+                <button data-format="md">.md (markdown)</button>
+                <button data-format="svg">.svg</button>
+                <button data-format="png">.png</button>
+                <button data-format="pdf">.pdf</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-content mermaid-panel-content">
+          <div class="mermaid-editor-section">
+            <div class="editor-toolbar">
+              <span class="editor-label">Editor</span>
+              <button id="format-code" class="btn btn-xs" title="Formatear código">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="4 7 4 4 20 4 20 7" />
+                  <line x1="9" y1="20" x2="15" y2="20" />
+                  <line x1="12" y1="4" x2="12" y2="20" />
+                </svg>
+              </button>
+            </div>
+            <textarea id="mermaid-editor" class="mermaid-editor" placeholder="Escribe código Mermaid aquí...
+Ejemplo:
+flowchart TD
+    A[Inicio] --> B{¿Condición?}
+    B -->|Sí| C[Resultado 1]
+    B -->|No| D[Resultado 2]"></textarea>
+          </div>
+          <div class="mermaid-preview-section">
+            <div class="editor-toolbar">
+              <span class="editor-label">Preview</span>
+              <button id="zoom-in" class="btn btn-xs" title="Zoom in">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                  <path d="M11 8v6M8 11h6" />
+                </svg>
+              </button>
+              <button id="zoom-out" class="btn btn-xs" title="Zoom out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                  <path d="M8 11h6" />
+                </svg>
+              </button>
+              <button id="zoom-reset" class="btn btn-xs" title="Reset zoom">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+            </div>
+            <div id="mermaid-preview" class="mermaid-preview">
+              <div class="preview-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="M21 15l-5-5L5 21" />
+                </svg>
+                <p>Preview will appear here</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Error Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Templates Modal -->
+    <div id="templates-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Diagram Templates</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="templates-grid" id="templates-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Conversion History</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="history-list" class="history-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="clear-history" class="btn btn-danger">Clear History</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Inputs (hidden) -->
+    <input type="file" id="drawio-file-input" accept=".drawio,.xml" hidden>
+    <input type="file" id="mermaid-file-input" accept=".mmd,.md,.txt" hidden>
+  </div>
+
+  <!-- Page Selection Modal -->
+  <div id="page-selection-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Select Page</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">The file contains multiple pages. Select which one you want to convert:</p>
+        <div id="pages-list" class="pages-list">
+          <!-- Pages will be injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
