@@ -142,6 +142,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
+  transition: all var(--transition-base);
 }
 
 .logo {
@@ -281,6 +282,10 @@ body {
   padding: var(--spacing-lg);
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  /* Allow full width */
+  margin: 0;
 }
 
 /* ===================================
@@ -294,7 +299,9 @@ body {
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  min-height: 0;
+  min-height: 400px;
+  height: calc(100vh - 120px);
+  /* Stable height on desktop */
 }
 
 .panel-header {
@@ -483,6 +490,8 @@ body {
 .mermaid-panel-content {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .mermaid-editor-section,
@@ -534,15 +543,11 @@ body {
 }
 
 .mermaid-preview {
-  flex: 1;
-  display: flex;
-  align-items: flex-start;
-  /* Changed from center */
-  justify-content: flex-start;
-  /* Changed from center */
   padding: var(--spacing-md);
   overflow: auto;
+  /* Internal scrolling for preview */
   background: var(--color-bg-tertiary);
+  flex: 1;
 }
 
 .preview-placeholder {
@@ -705,6 +710,7 @@ body {
   display: flex;
   flex-direction: column;
   animation: modalIn var(--transition-base) ease-out;
+  overflow: hidden;
 }
 
 @keyframes modalIn {
@@ -771,7 +777,7 @@ body {
    =================================== */
 .templates-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--spacing-md);
 }
 
@@ -913,6 +919,67 @@ body {
 
   .panel-actions {
     width: 100%;
+    overflow-x: auto;
+    padding-bottom: var(--spacing-xs);
+  }
+
+  .panel-actions .btn {
+    flex: 1;
+    min-width: fit-content;
+  }
+
+  .panel {
+    min-height: 450px;
+    height: 60vh;
+  }
+
+  .mermaid-panel-content {
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  .mermaid-editor-section {
+    min-height: 300px;
+  }
+
+  .mermaid-preview-section {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo h1 {
+    font-size: var(--font-size-base);
+  }
+
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .header-actions {
+    gap: var(--spacing-xs);
+  }
+
+  .header-actions .btn {
+    padding: var(--spacing-sm);
+  }
+
+  .header-actions .btn span {
+    display: none;
+  }
+
+  .header-actions .btn svg {
+    margin: 0;
+  }
+
+  .btn-convert {
+    padding: var(--spacing-sm);
+    min-width: 80px;
+  }
+
+  .btn-convert span {
+    font-size: var(--font-size-lg);
   }
 }
 
