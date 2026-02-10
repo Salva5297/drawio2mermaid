@@ -13,7 +13,7 @@ import { decodeDrawioContent, parseDrawioXML, generateDrawioXML, getDrawioPages 
 import { validateMermaidSyntax } from './converters/mermaidParser.js';
 
 // Import editors
-import { initDrawioEmbed, loadDiagram, getCurrentXml, loadFromFile, createNew, hasContent, isEditorVisible, setCurrentXml } from './editors/drawioEmbed.js';
+import { initDrawioEmbed, loadDiagram, requestCurrentXml, getCurrentXml, loadFromFile, createNew, hasContent, isEditorVisible, setCurrentXml } from './editors/drawioEmbed.js';
 import { initMermaidEditor, setCode, getCode, getSvgContent, setTheme } from './editors/mermaidEditor.js';
 
 // Import export functionality
@@ -34,6 +34,8 @@ let mermaidEditorInstance = null;
 let drawioEditorInstance = null;
 let isDarkTheme = false;
 let pendingXmlForConversion = null; // Store XML while selecting page
+let lastDrawioSaveAt = 0;
+let lastXmlWarningAt = 0;
 
 /**
  * Initialize the application
@@ -100,11 +102,13 @@ function toggleTheme() {
 function initEditors() {
   // Initialize Draw.io embed
   try {
-    drawioEditorInstance = initDrawioEmbed('drawio-container', {
-      onSave: (xml) => {
+    drawioEditorInstance = initDrawioEmbed('drawio-container');
+    if (drawioEditorInstance && typeof drawioEditorInstance.onSave === 'function') {
+      drawioEditorInstance.onSave((xml) => {
         currentDrawioXml = xml;
-      }
-    });
+        lastDrawioSaveAt = Date.now();
+      });
+    }
   } catch (e) {
     console.warn('Could not initialize Draw.io embed:', e);
   }
@@ -342,11 +346,25 @@ function setupEventListeners() {
 /**
  * Convert Draw.io to Mermaid
  */
-function convertToMermaid() {
+async function convertToMermaid() {
   try {
-    // Use local currentDrawioXml first (synced when we convert or load files)
-    // Fall back to getCurrentXml() from the embed module
-    let xml = currentDrawioXml || getCurrentXml();
+    // Ask the embed for the freshest XML, then fall back to cached values
+    const { xml: latestXml, source } = await requestCurrentXml();
+    let xml = latestXml || currentDrawioXml || getCurrentXml();
+    currentDrawioXml = xml;
+
+    const now = Date.now();
+    const warningCooldownMs = 15000;
+    const staleThresholdMs = 5000;
+    if (
+      source === 'cache' &&
+      isEditorVisible() &&
+      (now - lastDrawioSaveAt > staleThresholdMs) &&
+      (now - lastXmlWarningAt > warningCooldownMs)
+    ) {
+      showWarning('Actualización pendiente', 'No se pudo obtener el XML más reciente del editor. Se usará el último estado conocido.');
+      lastXmlWarningAt = now;
+    }
     
     // Check if we have valid XML content
     if (!xml || !xml.trim()) {

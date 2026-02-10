@@ -4,6 +4,7 @@
  */
 
 const DRAWIO_EMBED_URL = 'https://embed.diagrams.net/';
+const EXPORT_TIMEOUT_MS = 300;
 
 let drawioIframe = null;
 let currentXml = null;
@@ -11,6 +12,8 @@ let messageHandler = null;
 let onSaveCallback = null;
 let isEditorReady = false;
 let exportResolve = null;
+let exportTimeoutId = null;
+let exportPromise = null;
 
 /**
  * Initialize draw.io embed
@@ -19,6 +22,10 @@ export function initDrawioEmbed(containerId, options = {}) {
   const container = document.getElementById(containerId);
   if (!container) {
     throw new Error(`Container #${containerId} not found`);
+  }
+
+  if (typeof options.onSave === 'function') {
+    onSaveCallback = options.onSave;
   }
   
   // Get or create iframe
@@ -158,38 +165,53 @@ export function setCurrentXml(xml) {
 
 /**
  * Request the current XML from the editor (async)
+ * Resolves with { xml, source } where source is 'export' or 'cache'
  */
 export function requestCurrentXml() {
-  return new Promise((resolve, reject) => {
+  if (exportPromise) {
+    return exportPromise;
+  }
+
+  exportPromise = new Promise((resolve) => {
+    const settle = (payload) => {
+      if (exportTimeoutId) {
+        clearTimeout(exportTimeoutId);
+        exportTimeoutId = null;
+      }
+      exportResolve = null;
+      exportPromise = null;
+      resolve(payload);
+    };
+
     if (!drawioIframe || !isEditorReady) {
-      resolve(currentXml);
+      settle({ xml: currentXml, source: 'cache' });
       return;
     }
-    
-    // Set up resolver for when we get the export
-    exportResolve = resolve;
-    
+
+    exportResolve = settle;
+
     // Request XML export from Draw.io
     const msg = {
       action: 'export',
       format: 'xml',
       spin: 'Obteniendo diagrama...'
     };
-    
+
     try {
       drawioIframe.contentWindow.postMessage(JSON.stringify(msg), '*');
-      
-      // Timeout after 5 seconds
-      setTimeout(() => {
+
+      // Timeout after a short wait to keep the UI responsive
+      exportTimeoutId = setTimeout(() => {
         if (exportResolve) {
-          exportResolve(currentXml);
-          exportResolve = null;
+          exportResolve({ xml: currentXml, source: 'cache' });
         }
-      }, 5000);
+      }, EXPORT_TIMEOUT_MS);
     } catch (e) {
-      resolve(currentXml);
+      settle({ xml: currentXml, source: 'cache' });
     }
   });
+
+  return exportPromise;
 }
 
 /**
@@ -236,10 +258,11 @@ function handleDrawioMessage(event) {
       // Export completed
       if (message.data) {
         // For XML format, data contains the XML
-        if (message.format === 'xml' && exportResolve) {
+        if (message.format === 'xml') {
           currentXml = message.data;
-          exportResolve(message.data);
-          exportResolve = null;
+          if (exportResolve) {
+            exportResolve({ xml: message.data, source: 'export' });
+          }
         } else {
           handleExport(message);
         }
@@ -299,6 +322,12 @@ export function destroy() {
   }
   isEditorReady = false;
   currentXml = null;
+  if (exportTimeoutId) {
+    clearTimeout(exportTimeoutId);
+    exportTimeoutId = null;
+  }
+  exportResolve = null;
+  exportPromise = null;
 }
 
 export default {
@@ -316,4 +345,3 @@ export default {
   isEditorVisible,
   destroy
 };
-
